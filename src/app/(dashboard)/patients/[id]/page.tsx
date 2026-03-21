@@ -167,7 +167,7 @@ export default function PatientProfilePage() {
                         ? ` · Finalized ${format(new Date(session.note.finalizedAt), 'h:mm a')}`
                         : ''}
                       {session.consentSigned && (
-                        <ShieldCheck size={11} className="text-forest-500" title="Consent documented" />
+                      <ShieldCheck size={11} className="text-forest-500" />
                       )}
                     </p>
                   </div>
