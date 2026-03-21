@@ -1,4 +1,6 @@
-import { PrismaClient } from '@prisma/client'
+/// <reference types="@prisma/client" />
+
+import { PrismaClient } from '@prisma/client'  // Keep—types issue
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
