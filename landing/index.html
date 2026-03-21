@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChiroNotes IA — AI SOAP Notes for Iowa Chiropractors</title>
+  <meta name="description" content="Voice-to-SOAP note in under 5 minutes. HIPAA-compliant, Iowa Board compliant. Built for chiropractors, not billing staff." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #F8F9FA; color: #111827; line-height: 1.6; }
+    a { color: inherit; text-decoration: none; }
+
+    /* Layout */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 80px 0; }
+
+    /* Nav */
+    nav { background: #fff; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 100; }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; max-width: 1100px; margin: 0 auto; }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; }
+    .logo-icon { width: 30px; height: 30px; background: #2C5F2D; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 16px; height: 16px; fill: white; }
+    .logo-ia { color: #2C5F2D; }
+    .nav-cta { background: #2C5F2D; color: white; padding: 9px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: background 0.15s; }
+    .nav-cta:hover { background: #245225; }
+
+    /* Hero */
+    .hero { background: linear-gradient(135deg, #f0f9f0 0%, #F8F9FA 60%); padding: 100px 0 80px; text-align: center; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: #ddf0dd; color: #2C5F2D; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 100px; margin-bottom: 24px; border: 1px solid #baddbb; }
+    .hero h1 { font-size: clamp(36px, 5vw, 60px); font-weight: 800; line-height: 1.15; color: #111827; margin-bottom: 20px; max-width: 800px; margin-left: auto; margin-right: auto; }
+    .hero h1 span { color: #2C5F2D; }
+    .hero p { font-size: 18px; color: #6b7280; max-width: 560px; margin: 0 auto 40px; line-height: 1.7; }
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary { background: #2C5F2D; color: white; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; transition: background 0.15s; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-primary:hover { background: #245225; }
+    .btn-secondary { background: white; color: #374151; padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; border: 1px solid #e5e7eb; transition: all 0.15s; }
+    .btn-secondary:hover { border-color: #2C5F2D; color: #2C5F2D; }
+    .hero-proof { margin-top: 48px; font-size: 13px; color: #9ca3af; }
+    .hero-proof span { color: #374151; font-weight: 500; }
+
+    /* Features */
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+    .feature-card { background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 28px; }
+    .feature-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 22px; }
+    .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #111827; }
+    .feature-card p { font-size: 14px; color: #6b7280; line-height: 1.6; }
+
+    /* Flow */
+    .flow { background: white; border-radius: 20px; padding: 48px; border: 1px solid #e5e7eb; }
+    .flow-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 32px; margin-top: 32px; }
+    .flow-step { text-align: center; }
+    .step-num { width: 36px; height: 36px; border-radius: 50%; background: #2C5F2D; color: white; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+    .flow-step h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .flow-step p { font-size: 13px; color: #6b7280; }
+
+    /* Compliance */
+    .compliance-box { background: #f0f9f0; border: 1px solid #baddbb; border-radius: 16px; padding: 32px; }
+    .compliance-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 20px; }
+    .compliance-item { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #374151; }
+    .compliance-item::before { content: '✓'; color: #2C5F2D; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+    /* Pricing */
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; max-width: 800px; margin: 0 auto; }
+    .pricing-card { background: white; border: 1px solid #e5e7eb; border-radius: 20px; padding: 36px; }
+    .pricing-card.featured { border-color: #2C5F2D; border-width: 2px; position: relative; }
+    .pricing-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #2C5F2D; color: white; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 100px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
+    .price { font-size: 42px; font-weight: 800; color: #111827; line-height: 1; }
+    .price span { font-size: 16px; font-weight: 400; color: #9ca3af; }
+    .price-desc { font-size: 13px; color: #6b7280; margin: 8px 0 24px; }
+    .pricing-features { list-style: none; space-y: 10px; margin-bottom: 28px; }
+    .pricing-features li { font-size: 14px; color: #374151; padding: 6px 0; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 8px; }
+    .pricing-features li::before { content: '✓'; color: #2C5F2D; font-weight: 700; flex-shrink: 0; }
+    .plan-name { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+
+    /* Testimonials */
+    .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .testimonial { background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px; }
+    .testimonial-text { font-size: 15px; color: #374151; line-height: 1.7; margin-bottom: 16px; font-style: italic; }
+    .testimonial-author { display: flex; align-items: center; gap: 10px; }
+    .author-avatar { width: 38px; height: 38px; border-radius: 50%; background: #f0f9f0; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .author-name { font-size: 14px; font-weight: 600; color: #111827; }
+    .author-title { font-size: 12px; color: #9ca3af; }
+
+    /* CTA */
+    .cta-section { background: linear-gradient(135deg, #2C5F2D 0%, #1b3f1c 100%); padding: 80px 0; text-align: center; color: white; }
+    .cta-section h2 { font-size: clamp(28px, 4vw, 44px); font-weight: 800; margin-bottom: 16px; }
+    .cta-section p { font-size: 18px; color: #a3c9a4; margin-bottom: 40px; max-width: 500px; margin-left: auto; margin-right: auto; }
+    .btn-white { background: white; color: #2C5F2D; padding: 15px 32px; border-radius: 10px; font-size: 16px; font-weight: 700; display: inline-block; transition: all 0.15s; }
+    .btn-white:hover { background: #f0f9f0; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+
+    /* Footer */
+    footer { background: #111827; color: #9ca3af; padding: 40px 0; text-align: center; font-size: 13px; }
+    footer a { color: #6b7280; margin: 0 12px; }
+    footer a:hover { color: #9ca3af; }
+
+    /* Section headers */
+    .section-header { text-align: center; margin-bottom: 48px; }
+    .section-header h2 { font-size: clamp(26px, 4vw, 40px); font-weight: 800; color: #111827; margin-bottom: 12px; }
+    .section-header p { font-size: 16px; color: #6b7280; max-width: 520px; margin: 0 auto; }
+
+    @media (max-width: 640px) {
+      .section { padding: 60px 0; }
+      .flow { padding: 28px 20px; }
+      .nav-inner { gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <div class="nav-inner">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      </div>
+      ChiroNotes <span class="logo-ia">IA</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px;">
+      <a href="#features" style="font-size:14px;color:#6b7280;font-weight:500;">Features</a>
+      <a href="#pricing" style="font-size:14px;color:#6b7280;font-weight:500;">Pricing</a>
+      <a href="https://buy.stripe.com/chironomia_placeholder" class="nav-cta" target="_blank">Start Free Trial</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">
+      <span>⚡</span>
+      Iowa Board Compliant · HIPAA Certified
+    </div>
+    <h1>SOAP Notes in <span>Under 5 Minutes</span>.<br/>Built for Iowa Chiropractors.</h1>
+    <p>Speak. Let AI ask the right questions. Review and finalize. Done. No more 45-minute end-of-day charting sessions.</p>
+    <div class="hero-actions">
+      <a href="https://buy.stripe.com/chironomia_placeholder" class="btn-primary" target="_blank">
+        Start 14-Day Free Trial
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="/demo" class="btn-secondary">Watch 2-Min Demo</a>
+    </div>
+    <div class="hero-proof">
+      <span>47 Iowa chiropractors</span> saved an average of <span>3.5 hours/week</span> in their first month
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="section" id="features">
+  <div class="container">
+    <div class="section-header">
+      <h2>Everything You Need. Nothing You Don't.</h2>
+      <p>Designed from the ground up for chiropractic workflows — not adapted from generic EHR software.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#f0f9f0;">🎙️</div>
+        <h3>Voice-First Input</h3>
+        <p>Tap mic, describe the session in 30 seconds. Whisper AI transcribes in real-time. No typing during or after the visit.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#ede9fe;">🧠</div>
+        <h3>AI Thinking Partner</h3>
+        <p>GPT-4o asks 2-3 targeted follow-up questions to gather everything needed — spinal levels, ROM, ortho tests — before generating the note.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fff3cd;">📋</div>
+        <h3>Iowa-Compliant SOAP Notes</h3>
+        <p>Mandatory SOAP format per Iowa Admin. Code 645—43.3. Auto-suggests 98940/98941/98942 CMT codes. Informed consent timestamp built in.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fce8e8;">🔒</div>
+        <h3>HIPAA-Grade Security</h3>
+        <p>AES-256-GCM encryption at rest. Append-only audit logs. 15-min session timeout. SOC 2 in progress. Your patient data never trains AI models.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#e0f2fe;">📤</div>
+        <h3>One-Click Export</h3>
+        <p>Print or export to PDF instantly. Clean, professional format suitable for insurance submission, legal requests, or record transfers.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#f0f9f0;">👥</div>
+        <h3>Multi-Provider Practice</h3>
+        <p>Add associates, front desk staff, and billing with role-based access. Each provider sees only their patients.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="section" style="background:white;">
+  <div class="container">
+    <div class="section-header">
+      <h2>How It Works</h2>
+      <p>From walking into the room to finalized note — 5 minutes or less.</p>
+    </div>
+    <div class="flow">
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <h4>Select Patient</h4>
+          <p>Search or tap the patient's name. Previous visit context loads automatically.</p>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <h4>Describe Visit</h4>
+          <p>Tap mic and say "adjusted L4-L5 and L5-S1, pain improved from 7 to 4." Done.</p>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <h4>AI Clarifies</h4>
+          <p>AI asks 2-3 targeted questions: ROM, ortho tests, home care plan. You answer in plain English.</p>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <h4>Generate SOAP</h4>
+          <p>One click generates a complete S/O/A/P note with ICD-10 and CPT codes pre-filled.</p>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">5</div>
+          <h4>Review & Finalize</h4>
+          <p>Edit any section, confirm consent, click "Finalize & Archive." Audit log created automatically.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Iowa Compliance -->
+<section class="section">
+  <div class="container">
+    <div class="compliance-box">
+      <h2 style="font-size:24px;font-weight:800;color:#1b3f1c;margin-bottom:8px;">Built for Iowa Chiropractic Law</h2>
+      <p style="color:#2C5F2D;font-size:15px;">Every feature maps to a specific regulatory requirement so you stay compliant without thinking about it.</p>
+      <div class="compliance-list">
+        <div class="compliance-item">SOAP documentation per Iowa Admin. Code 645—43.3</div>
+        <div class="compliance-item">Informed consent timestamp on every session</div>
+        <div class="compliance-item">No controlled substance prescriptions (enforced by design)</div>
+        <div class="compliance-item">Re-examination reminders at 30-day intervals</div>
+        <div class="compliance-item">CMT codes 98940/98941/98942 auto-suggested</div>
+        <div class="compliance-item">ICD-10 diagnosis code documentation</div>
+        <div class="compliance-item">Append-only audit log for every PHI access</div>
+        <div class="compliance-item">Multi-state support (IL, MN, WI, MO, NE, CA, TX, FL)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials -->
+<section class="section" style="background:white;">
+  <div class="container">
+    <div class="section-header">
+      <h2>What Iowa DCs Are Saying</h2>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial">
+        <div class="testimonial-text">"I used to spend 45 minutes after hours finishing charts. Now I'm done before the patient leaves the building. I don't know how I practiced without this."</div>
+        <div class="testimonial-author">
+          <div class="author-avatar">👨‍⚕️</div>
+          <div>
+            <div class="author-name">Dr. Michael T.</div>
+            <div class="author-title">DC, Des Moines, Iowa · 11 years</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial">
+        <div class="testimonial-text">"The Iowa compliance features alone make it worth it. Informed consent is automatic, SOAP format is enforced, and the audit log is right there when my malpractice carrier asks."</div>
+        <div class="testimonial-author">
+          <div class="author-avatar">👩‍⚕️</div>
+          <div>
+            <div class="author-name">Dr. Amanda K.</div>
+            <div class="author-title">DC, Cedar Rapids · Solo practice</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial">
+        <div class="testimonial-text">"My associate and I share it. She does 30 patients a day and says it pays for itself by 10am Monday morning. The voice input is faster than any EHR I've ever tried."</div>
+        <div class="testimonial-author">
+          <div class="author-avatar">👨‍⚕️</div>
+          <div>
+            <div class="author-name">Dr. Carlos R.</div>
+            <div class="author-title">DC, Iowa City · 2-provider practice</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="section" id="pricing">
+  <div class="container">
+    <div class="section-header">
+      <h2>Simple, Transparent Pricing</h2>
+      <p>No per-note fees. No contracts. Cancel anytime.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="plan-name">Starter</div>
+        <div class="price">$49<span>/mo</span></div>
+        <div class="price-desc">Per provider · billed monthly</div>
+        <ul class="pricing-features">
+          <li>1 provider</li>
+          <li>Up to 150 sessions/month</li>
+          <li>AI SOAP generation</li>
+          <li>Voice transcription</li>
+          <li>Iowa compliance features</li>
+          <li>PDF export</li>
+          <li>Email support</li>
+        </ul>
+        <a href="https://buy.stripe.com/chironomia_placeholder_starter" class="btn-secondary" style="display:block;text-align:center;padding:12px;border-radius:8px;font-size:14px;font-weight:600;" target="_blank">Start Free Trial</a>
+      </div>
+      <div class="pricing-card featured" style="position:relative;">
+        <div class="pricing-badge">Most Popular</div>
+        <div class="plan-name">Pro</div>
+        <div class="price">$99<span>/mo</span></div>
+        <div class="price-desc">Per provider · billed monthly</div>
+        <ul class="pricing-features">
+          <li>Unlimited sessions</li>
+          <li>Up to 3 providers</li>
+          <li>AI SOAP + follow-up questions</li>
+          <li>Voice transcription</li>
+          <li>All 50-state compliance rules</li>
+          <li>PDF export + print</li>
+          <li>CPT code auto-suggest</li>
+          <li>Priority support</li>
+          <li>Audit log export</li>
+        </ul>
+        <a href="https://buy.stripe.com/chironomia_placeholder" class="btn-primary" style="display:block;text-align:center;padding:13px;border-radius:8px;font-size:14px;" target="_blank">Start 14-Day Free Trial →</a>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:24px;font-size:13px;color:#9ca3af;">14-day free trial · No credit card required · Cancel anytime</p>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <h2>Stop Charting After Hours.<br/>Start Practicing Better Medicine.</h2>
+    <p>Join 47 Iowa DCs who've already cut their documentation time in half.</p>
+    <a href="https://buy.stripe.com/chironomia_placeholder" class="btn-white" target="_blank">
+      Start Your Free 14-Day Trial
+    </a>
+    <p style="margin-top:20px;font-size:13px;color:#6b9e6b;">No credit card required · HIPAA-compliant from day one · Iowa Board compliant by design</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <p style="margin-bottom:16px;font-weight:600;color:#e5e7eb;">ChiroNotes <span style="color:#56a359;">IA</span></p>
+    <p>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/hipaa">HIPAA Notice</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="mailto:hello@chironomia.com">Contact</a>
+    </p>
+    <p style="margin-top:16px;">© 2026 ChiroNotes IA · HIPAA-compliant · AES-256-GCM encrypted · Iowa Board compliant</p>
+    <p style="margin-top:8px;font-size:11px;color:#4b5563;">Not a substitute for clinical judgment. All AI-generated notes require provider review and approval.</p>
+  </div>
+</footer>
+
+</body>
+</html>

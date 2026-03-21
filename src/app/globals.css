@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+
+  /* Chiropractic green palette */
+  --color-forest-50: #f0f9f0;
+  --color-forest-100: #ddf0dd;
+  --color-forest-200: #baddbb;
+  --color-forest-300: #8ac48c;
+  --color-forest-400: #56a359;
+  --color-forest-500: #2C5F2D;
+  --color-forest-600: #245225;
+  --color-forest-700: #1b3f1c;
+  --color-forest-800: #122a13;
+  --color-forest-900: #0a1a0b;
+}
+
+:root {
+  --background: #F8F9FA;
+  --foreground: #111827;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Waveform bars animation for VoiceInput */
+@keyframes waveform {
+  0%, 100% { height: 3px; }
+  50% { height: 18px; }
+}
+
+.waveform-bar {
+  width: 3px;
+  background: currentColor;
+  border-radius: 2px;
+  animation: waveform 0.7s ease-in-out infinite;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }

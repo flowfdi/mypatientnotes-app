@@ -1,0 +1,207 @@
+// This is your Prisma schema file
+// Learn more at: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  OWNER
+  PROVIDER
+  FRONT_DESK
+}
+
+enum SessionStatus {
+  DRAFT
+  IN_PROGRESS
+  FINALIZED
+}
+
+enum AuditAction {
+  CREATED
+  READ
+  UPDATED
+  FINALIZED
+  EXPORTED
+  DELETED
+  LOGIN
+  LOGOUT
+}
+
+enum AuditResource {
+  PATIENT
+  SESSION
+  NOTE
+  USER
+  PRACTICE
+}
+
+// ─── Practice ──────────────────────────────────────────────────────────────
+
+model Practice {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  phone       String?
+  npiNumber   String?  @map("npi_number")
+  state       String?  @default("IA") // jurisdiction for compliance rules
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users    User[]
+  patients Patient[]
+  sessions Session[]
+  notes    Note[]
+  auditLogs AuditLog[]
+
+  @@map("practices")
+}
+
+// ─── User ──────────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  practiceId  String   @map("practice_id")
+  clerkId     String   @unique @map("clerk_id")
+  email       String   @unique
+  firstName   String   @map("first_name")
+  lastName    String   @map("last_name")
+  role        UserRole @default(PROVIDER)
+  npiNumber   String?  @map("npi_number")
+  createdAt   DateTime @default(now()) @map("created_at")
+  lastLoginAt DateTime? @map("last_login_at")
+
+  practice      Practice   @relation(fields: [practiceId], references: [id])
+  sessions      Session[]
+  finalizedNotes Note[]    @relation("FinalizedBy")
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+// ─── Patient ───────────────────────────────────────────────────────────────
+
+model Patient {
+  id               String   @id @default(cuid())
+  practiceId       String   @map("practice_id")
+  firstName        String   @map("first_name")
+  lastName         String   @map("last_name")
+  dateOfBirth      DateTime? @map("date_of_birth")
+  sex              String?
+  phone            String?
+  email            String?
+  insuranceProvider String?  @map("insurance_provider")
+  insuranceId      String?  @map("insurance_id")
+  chiefComplaint   String?  @map("chief_complaint") // encrypted at app layer
+  isArchived       Boolean  @default(false) @map("is_archived")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  practice Practice  @relation(fields: [practiceId], references: [id])
+  sessions Session[]
+
+  @@map("patients")
+}
+
+// ─── Session ───────────────────────────────────────────────────────────────
+
+model Session {
+  id            String        @id @default(cuid())
+  practiceId    String        @map("practice_id")
+  patientId     String        @map("patient_id")
+  providerId    String        @map("provider_id")
+  sessionDate   DateTime      @default(now()) @map("session_date")
+  status        SessionStatus @default(DRAFT)
+  rawTranscript  String?       @map("raw_transcript") // encrypted at app layer
+  visitNumber    Int           @default(1) @map("visit_number")
+  // Iowa / multi-state compliance: informed consent per session
+  consentSigned  Boolean       @default(false) @map("consent_signed")
+  consentAt      DateTime?     @map("consent_at")
+  consentMethod  String?       @map("consent_method") // "verbal" | "written" | "electronic"
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  practice        Practice        @relation(fields: [practiceId], references: [id])
+  patient         Patient         @relation(fields: [patientId], references: [id])
+  provider        User            @relation(fields: [providerId], references: [id])
+  note            Note?
+  aiConversation  AIConversation?
+
+  @@map("sessions")
+}
+
+// ─── Note ──────────────────────────────────────────────────────────────────
+
+model Note {
+  id            String    @id @default(cuid())
+  sessionId     String    @unique @map("session_id")
+  practiceId    String    @map("practice_id")
+  finalizedById String?   @map("finalized_by_id")
+
+  // SOAP sections — all encrypted at app layer
+  subjective    String?   // Patient-reported symptoms, pain levels, history
+  objective     String?   // Provider observations, exam findings, vitals
+  assessment    String?   // Diagnosis, clinical impression
+  plan          String?   // Treatment performed + next steps
+
+  aiDraft       String?   @map("ai_draft")       // Raw AI-generated SOAP
+  providerEdits String?   @map("provider_edits") // Track what provider changed
+  fullText      String?   @map("full_text")       // Assembled final note
+
+  icd10Codes    String[]  @map("icd10_codes")
+  cptCodes      String[]  @map("cpt_codes")
+
+  finalizedAt   DateTime? @map("finalized_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  session       Session   @relation(fields: [sessionId], references: [id])
+  practice      Practice  @relation(fields: [practiceId], references: [id])
+  finalizedBy   User?     @relation("FinalizedBy", fields: [finalizedById], references: [id])
+
+  @@map("notes")
+}
+
+// ─── AIConversation ────────────────────────────────────────────────────────
+
+model AIConversation {
+  id                     String   @id @default(cuid())
+  sessionId              String   @unique @map("session_id")
+  messages               Json     @default("[]") // Array of {role, content, timestamp}
+  followUpQuestionsAsked Int      @default(0) @map("follow_up_questions_asked")
+  modelUsed              String   @default("gpt-4o") @map("model_used")
+  tokensUsed             Int      @default(0) @map("tokens_used")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@map("ai_conversations")
+}
+
+// ─── AuditLog (append-only — NEVER DELETE) ─────────────────────────────────
+
+model AuditLog {
+  id           String        @id @default(cuid())
+  practiceId   String        @map("practice_id")
+  userId       String?       @map("user_id")
+  action       AuditAction
+  resourceType AuditResource @map("resource_type")
+  resourceId   String        @map("resource_id")
+  ipAddress    String?       @map("ip_address")
+  userAgent    String?       @map("user_agent")
+  metadata     Json?         // extra context, never include PHI
+  timestamp    DateTime      @default(now())
+
+  practice Practice @relation(fields: [practiceId], references: [id])
+  user     User?    @relation(fields: [userId], references: [id])
+
+  // No updatedAt — this table is insert-only
+  @@map("audit_logs")
+}
