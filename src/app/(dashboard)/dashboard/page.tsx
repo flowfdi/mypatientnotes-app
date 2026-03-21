@@ -95,7 +95,7 @@ export default async function DashboardPage() {
             {recentSessions.length === 0 && (
               <p className="px-5 py-8 text-sm text-gray-400 text-center">No sessions yet.</p>
             )}
-            {recentSessions.map((session) => (
+            {recentSessions.map((session: any) => (
               <Link
                 key={session.id}
                 href={`/patients/${session.patientId ?? session.patient?.id}/session/${session.id}`}
