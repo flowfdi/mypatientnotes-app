@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { writeAuditLog } from '@/lib/hipaa/audit'
-import { encryptFields, encrypt } from '@/lib/hipaa/encrypt'
-import { isDemoMode } from '@/lib/demo/auth'
+import { getApiUserId, getOrSeedStore, finalizeSessionInStore, getPracticeId } from '@/lib/demo/store'
 
 const finalizeSchema = z.object({
   soapNote: z.object({
@@ -20,60 +19,50 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
-  const body = await req.json()
-
-  if (isDemoMode()) {
-    // In demo mode just acknowledge — no DB write needed
-    return NextResponse.json({ success: true })
-  }
-
-  const { auth } = await import('@clerk/nextjs/server')
-  const { db } = await import('@/lib/db/client')
-  const { userId } = await auth()
+  const userId = await getApiUserId()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const body = await req.json()
   const parsed = finalizeSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 })
   }
 
-  const user = await db.user.findUnique({ where: { clerkId: userId } })
-  if (!user || !user.practiceId) return NextResponse.json({ error: 'User not found' }, { status: 404 })
-
-  if (user.role === 'FRONT_DESK') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
   const { sessionId } = await params
-  const session = await db.session.findUnique({ where: { id: sessionId } })
-  if (!session || session.practiceId !== user.practiceId) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  }
+  const { sessions } = getOrSeedStore(userId)
+  const session = sessions.find((s) => s.id === sessionId)
+  if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { soapNote, cptCodes, consentSigned, consentMethod } = parsed.data
-  const encrypted = encryptFields(soapNote, ['subjective', 'objective', 'assessment', 'plan'])
-  const fullTextPlain = `SUBJECTIVE:\n${soapNote.subjective}\n\nOBJECTIVE:\n${soapNote.objective}\n\nASSESSMENT:\n${soapNote.assessment}\n\nPLAN:\n${soapNote.plan}`
-  const fullText = encrypt(fullTextPlain)
   const now = new Date()
+  const noteData = {
+    id: `note-${sessionId}`,
+    sessionId,
+    aiGenerated: false,
+    finalizedAt: now,
+    subjective: soapNote.subjective,
+    objective: soapNote.objective,
+    assessment: soapNote.assessment,
+    plan: soapNote.plan,
+    icd10Codes: [] as string[],
+    cptCodes: cptCodes ?? [],
+  }
 
-  await db.$transaction([
-    db.note.upsert({
-      where: { sessionId },
-      create: { sessionId, practiceId: session.practiceId, ...encrypted, fullText, cptCodes: cptCodes ?? [], finalizedAt: now, finalizedById: user.id },
-      update: { ...encrypted, fullText, cptCodes: cptCodes ?? [], finalizedAt: now, finalizedById: user.id },
-    }),
-    db.session.update({
-      where: { id: sessionId },
-      data: {
-        status: 'FINALIZED',
-        consentSigned: consentSigned ?? false,
-        consentAt: consentSigned ? now : null,
-        consentMethod: consentMethod ?? null,
-      },
-    }),
-  ])
+  finalizeSessionInStore(userId, sessionId, noteData)
 
+  // Update consent on the session object
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const liveSession = sessions.find((s) => s.id === sessionId) as any
+  if (liveSession) {
+    liveSession.consentSigned = consentSigned ?? false
+    liveSession.consentAt = consentSigned ? now : null
+    liveSession.consentMethod = consentMethod ?? null
+  }
+
+  const practiceId = getPracticeId(userId)
   await writeAuditLog({
-    practiceId: session.practiceId,
-    userId: user.id,
+    practiceId,
+    userId,
     action: 'FINALIZED',
     resourceType: 'NOTE',
     resourceId: sessionId,

@@ -3,49 +3,65 @@ import Link from 'next/link'
 import { Plus, Users, FileText, Clock, Zap, TrendingUp } from 'lucide-react'
 import { format, startOfMonth } from 'date-fns'
 import { isDemoMode } from '@/lib/demo/auth'
-import { DEMO_USER, DEMO_PRACTICE, DEMO_SESSIONS, DEMO_PATIENTS } from '@/lib/demo/mock-data'
+import { DEMO_USER, DEMO_PRACTICE } from '@/lib/demo/mock-data'
+import { getOrSeedStore, getStoreUser, autoProvisionUser } from '@/lib/demo/store'
 
 async function getDashboardData() {
+  // ── Demo mode ──────────────────────────────────────────────────────────
   if (isDemoMode()) {
-    const thisMonth = DEMO_SESSIONS.filter(
+    const { sessions, patients } = getOrSeedStore('demo-user-1')
+    const thisMonth = sessions.filter(
       (s) => new Date(s.sessionDate) >= startOfMonth(new Date())
     ).length
     return {
       user: { ...DEMO_USER, practice: DEMO_PRACTICE },
-      patientCount: DEMO_PATIENTS.length,
-      sessionCount: DEMO_SESSIONS.filter((s) => s.status === 'FINALIZED').length,
+      patientCount: patients.length,
+      sessionCount: sessions.filter((s) => s.status === 'FINALIZED').length,
       sessionsThisMonth: thisMonth,
-      recentSessions: DEMO_SESSIONS.slice(0, 5),
+      recentSessions: sessions.slice(0, 5),
       isPro: false,
     }
   }
 
+  // ── Production (Clerk + in-memory store) ──────────────────────────────
   const { auth } = await import('@clerk/nextjs/server')
-  const { db } = await import('@/lib/db/client')
-
   const { userId } = await auth()
   if (!userId) redirect('/sign-in')
 
-  const user = await db.user.findUnique({
+  // Try DB first (noop stub returns null — that's fine)
+  const { db } = await import('@/lib/db/client')
+  let dbUser = await db.user.findUnique({
     where: { clerkId: userId },
     include: { practice: true },
   })
-  if (!user) redirect('/onboarding')
 
-  const monthStart = startOfMonth(new Date())
-  const [patientCount, sessionCount, sessionsThisMonth, recentSessions] = await Promise.all([
-    db.patient.count({ where: { practiceId: user.practiceId, isArchived: false } }),
-    db.session.count({ where: { practiceId: user.practiceId, status: 'FINALIZED' } }),
-    db.session.count({ where: { practiceId: user.practiceId, createdAt: { gte: monthStart } } }),
-    db.session.findMany({
-      where: { practiceId: user.practiceId },
-      orderBy: { sessionDate: 'desc' },
-      take: 5,
-      include: { patient: true, note: true },
-    }),
-  ])
+  // If DB has no record, check in-memory store (set during onboarding)
+  let user = dbUser ?? getStoreUser(userId)
 
-  return { user, patientCount, sessionCount, sessionsThisMonth, recentSessions, isPro: false }
+  if (!user) {
+    // Auto-provision: fetch name from Clerk and seed demo data immediately
+    const { currentUser } = await import('@clerk/nextjs/server')
+    const clerkUser = await currentUser()
+    const firstName = clerkUser?.firstName ?? 'Doctor'
+    const lastName = clerkUser?.lastName ?? 'User'
+    const email =
+      clerkUser?.emailAddresses?.[0]?.emailAddress ?? `${userId}@example.com`
+    user = autoProvisionUser(userId, firstName, lastName, email)
+  }
+
+  const { sessions, patients } = getOrSeedStore(userId)
+  const thisMonth = sessions.filter(
+    (s) => new Date(s.sessionDate) >= startOfMonth(new Date())
+  ).length
+
+  return {
+    user,
+    patientCount: patients.length,
+    sessionCount: sessions.filter((s) => s.status === 'FINALIZED').length,
+    sessionsThisMonth: thisMonth,
+    recentSessions: sessions.slice(0, 5),
+    isPro: false,
+  }
 }
 
 const HOUR = new Date().getHours()
@@ -95,6 +111,7 @@ export default async function DashboardPage() {
             {recentSessions.length === 0 && (
               <p className="px-5 py-8 text-sm text-gray-400 text-center">No sessions yet.</p>
             )}
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {recentSessions.map((session: any) => (
               <Link
                 key={session.id}

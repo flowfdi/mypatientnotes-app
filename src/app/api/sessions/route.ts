@@ -1,57 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { writeAuditLog } from '@/lib/hipaa/audit'
-import { isDemoMode } from '@/lib/demo/auth'
+import { getOrSeedStore, getApiUserId, addSessionToStore, getPracticeId } from '@/lib/demo/store'
 
 const createSessionSchema = z.object({
   patientId: z.string(),
 })
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-
-  if (isDemoMode()) {
-    const sessionId = `session-demo-${Date.now()}`
-    return NextResponse.json({ sessionId })
-  }
-
-  const { auth } = await import('@clerk/nextjs/server')
-  const { db } = await import('@/lib/db/client')
-  const { userId } = await auth()
+  const userId = await getApiUserId()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const body = await req.json()
   const parsed = createSessionSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
 
-  const user = await db.user.findUnique({ where: { clerkId: userId } })
-  if (!user || !user.practiceId) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  const { patients, sessions } = getOrSeedStore(userId)
+  const patient = patients.find((p) => p.id === parsed.data.patientId)
+  if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
 
-  if (user.role === 'FRONT_DESK') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const visitCount = sessions.filter((s) => s.patientId === parsed.data.patientId).length
+  const practiceId = getPracticeId(userId)
+  const sessionId = `session-${Date.now()}`
 
-  const patient = await db.patient.findUnique({ where: { id: parsed.data.patientId } })
-  if (!patient || patient.practiceId !== user.practiceId) {
-    return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const newSession: any = {
+    id: sessionId,
+    practiceId,
+    patientId: parsed.data.patientId,
+    providerId: userId,
+    sessionDate: new Date(),
+    status: 'DRAFT',
+    visitNumber: visitCount + 1,
+    rawTranscript: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    patient: { id: patient.id, firstName: patient.firstName, lastName: patient.lastName },
+    provider: { firstName: 'Doctor', lastName: 'User' },
+    note: null,
   }
 
-  const visitCount = await db.session.count({ where: { patientId: parsed.data.patientId } })
-
-  const session = await db.session.create({
-    data: {
-      patientId: parsed.data.patientId,
-      practiceId: user.practiceId,
-      providerId: user.id,
-      visitNumber: visitCount + 1,
-      status: 'DRAFT',
-    },
-  })
+  addSessionToStore(userId, newSession)
 
   await writeAuditLog({
-    practiceId: user.practiceId,
-    userId: user.id,
+    practiceId,
+    userId,
     action: 'CREATED',
     resourceType: 'SESSION',
-    resourceId: session.id,
+    resourceId: sessionId,
   })
 
-  return NextResponse.json({ sessionId: session.id })
+  return NextResponse.json({ sessionId })
 }
