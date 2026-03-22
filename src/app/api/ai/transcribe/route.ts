@@ -11,10 +11,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { db } from '@/lib/db/client'
 import { writeAuditLog } from '@/lib/hipaa/audit'
+import { isDemoMode } from '@/lib/demo/auth'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? 'sk-demo' })
 
 export async function POST(req: NextRequest) {
+  if (isDemoMode()) {
+    return NextResponse.json({
+      text: 'Patient reports improvement in lower back pain, rated 3 out of 10 today, down from 6 at last visit. Cervical adjustments performed at C4 and C5 using Diversified technique with good cavitation response. Applied moist heat 10 minutes pre-adjustment. Patient instructed to continue home exercise protocol including chin tucks and McKenzie extension exercises. Return visit scheduled in one week.',
+    })
+  }
+
   const { userId } = await auth()
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

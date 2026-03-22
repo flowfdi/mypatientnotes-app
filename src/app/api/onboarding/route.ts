@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db/client'
 import { writeAuditLog } from '@/lib/hipaa/audit'
+import { isDemoMode } from '@/lib/demo/auth'
 
 const onboardingSchema = z.object({
   practiceName: z.string().min(1),
@@ -21,6 +22,10 @@ const onboardingSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  if (isDemoMode()) {
+    return NextResponse.json({ success: true, practiceId: 'demo-practice-1' })
+  }
+
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
